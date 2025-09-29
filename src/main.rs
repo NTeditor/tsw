@@ -1,86 +1,72 @@
 #[macro_use]
 mod macros;
+mod error;
 mod termux;
 
-use std::{collections::HashMap, process::Command};
+use std::process::Command;
 
-use clap::{Parser, arg, command};
+use clap::{Parser, Subcommand, arg, command};
+
+use crate::{error::AppError, termux::Termux};
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Exec {
+        #[arg(num_args = 1.., required = true)]
+        args: Vec<String>
+    },
+}
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Cli {
-    #[arg(short, num_args = 1..)]
-    command: Vec<String>,
-    #[arg(short, long, default_value = "bash")]
+    #[arg(long, default_value = "bash")]
     shell: String,
+    #[command(subcommand)]
+    command: Option<Commands>,
 }
 
-fn main() {
+fn main() -> Result<(), AppError> {
     let cli = Cli::parse();
-    println!("{:?}", cli.command);
-    let mut command = if cli.command.is_empty() {
-        build_command(cli.shell)
-    } else {
-        build_user_command(cli.shell, cli.command)
-    };
+    let mut command = match cli.command {
+        Some(Commands::Exec { args }) => build_user_command(cli.shell, args),
+        None => build_command(cli.shell),
+    }?;
 
-    match command.spawn() {
-        Ok(mut child) => {
-            let status = child
-                .wait()
-                .expect("Error while waiting for child process to finish");
-
-            let exit_code = status.code().unwrap_or(1);
-
-            std::process::exit(exit_code);
-        }
-        Err(e) => {
-            eprintln!("Command invoked cannot execute: {}", e);
-            std::process::exit(126);
-        }
-    }
+    let mut child = command.spawn()?;
+    let status = child.wait()?;
+    let exit_code = status.code().unwrap_or(1);
+    std::process::exit(exit_code);
 }
 
-fn build_command(shell_name: String) -> Command {
-    let mut command = Command::new(termux::get_su_file());
+fn build_command(shell_name: String) -> Result<Command, AppError> {
+    let termux = Termux::new()?;
+
+    let mut command = Command::new(&termux.su_file);
     command.args(["-i", "-c"]);
 
-    let env_vars = env_to_string(termux::get_env());
+    let env_vars = termux.env.to_string();
+    let shell = termux.get_shell_file(shell_name)?;
 
-    let root_command_string = format!(
-        "env '-i' {} '{}'",
-        env_vars,
-        termux::get_shell_file(shell_name)
-            .to_str()
-            .expect("Shell path contains invalid UTF-8. Only UTF-8 is supported.")
-    );
-    command.arg(root_command_string);
-    command
+    let root_command = format!("env '-i' {} '{}'", env_vars, shell);
+    command.arg(root_command);
+    Ok(command)
 }
 
-fn build_user_command(shell_name: String, user_command: Vec<String>) -> Command {
-    let mut command = Command::new(termux::get_su_file());
+fn build_user_command(shell_name: String, user_command: Vec<String>) -> Result<Command, AppError> {
+    let termux = Termux::new()?;
+
+    let mut command = Command::new(&termux.su_file);
     command.args(["-i", "-c"]);
 
-    let env_vars = env_to_string(termux::get_env());
-    let user_command_string = user_command.join(" ");
+    let env_vars = termux.env.to_string();
+    let user_command_str = user_command.join(" ");
+    let shell = termux.get_shell_file(shell_name)?;
 
-    let root_command_string = format!(
+    let root_command_str = format!(
         "env '-i' {} '{}' '-c' '{}'",
-        env_vars,
-        termux::get_shell_file(shell_name)
-            .to_str()
-            .expect("Shell path contains invalid UTF-8. Only UTF-8 is supported."),
-        user_command_string,
+        env_vars, shell, user_command_str,
     );
-    command.arg(root_command_string);
-    command
-}
-
-fn env_to_string(env_vars: HashMap<&'static str, String>) -> String {
-    env_vars
-        .iter()
-        .map(|(k, v)| format!("'{}={}'", k, v))
-        .collect::<Vec<_>>()
-        .join(" ")
+    command.arg(root_command_str);
+    Ok(command)
 }

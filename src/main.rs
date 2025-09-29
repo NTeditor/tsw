@@ -11,15 +11,17 @@ use clap::{Parser, arg, command};
 struct Cli {
     #[arg(short, num_args = 1..)]
     command: Vec<String>,
+    #[arg(short, long, default_value = "bash")]
+    shell: String,
 }
 
 fn main() {
     let cli = Cli::parse();
     println!("{:?}", cli.command);
     let mut command = if cli.command.is_empty() {
-        build_command()
+        build_command(cli.shell)
     } else {
-        build_user_command(cli.command)
+        build_user_command(cli.shell, cli.command)
     };
 
     match command.spawn() {
@@ -39,7 +41,7 @@ fn main() {
     }
 }
 
-fn build_command() -> Command {
+fn build_command(shell_name: String) -> Command {
     let mut command = Command::new(termux::get_su_file());
     command.args(["-i", "-c"]);
 
@@ -48,7 +50,7 @@ fn build_command() -> Command {
     let root_command_string = format!(
         "env '-i' {} '{}'",
         env_vars,
-        termux::get_bash_file()
+        termux::get_shell_file(shell_name)
             .to_str()
             .expect("Shell path contains invalid UTF-8. Only UTF-8 is supported.")
     );
@@ -56,7 +58,7 @@ fn build_command() -> Command {
     command
 }
 
-fn build_user_command(user_command: Vec<String>) -> Command {
+fn build_user_command(shell_name: String, user_command: Vec<String>) -> Command {
     let mut command = Command::new(termux::get_su_file());
     command.args(["-i", "-c"]);
 
@@ -66,7 +68,9 @@ fn build_user_command(user_command: Vec<String>) -> Command {
     let root_command_string = format!(
         "env '-i' {} '{}' '-c' '{}'",
         env_vars,
-        termux::get_bash_file().display().to_string(),
+        termux::get_shell_file(shell_name)
+            .to_str()
+            .expect("Shell path contains invalid UTF-8. Only UTF-8 is supported."),
         user_command_string,
     );
     command.arg(root_command_string);

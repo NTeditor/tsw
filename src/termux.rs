@@ -23,8 +23,13 @@ pub fn get_su_file() -> PathBuf {
     get_bin_path().join("su")
 }
 
-pub fn get_bash_file() -> PathBuf {
-    get_bin_path().join("bash")
+pub fn get_shell_file(shell_name: String) -> PathBuf {
+    let shell = get_bin_path().join(shell_name);
+    if shell.exists() {
+        shell
+    } else {
+        panic!("Shell not found at path: {}", shell.display());
+    }
 }
 
 pub fn get_env() -> HashMap<&'static str, String> {

@@ -34,16 +34,22 @@ impl Termux {
         if shell.exists() {
             Ok(shell.to_str().unwrap().to_owned())
         } else {
-            Err(AppError::InvalidShell {
-                shell: shell.to_string_lossy().into_owned(),
-            })
+            let raw_path = shell.to_string_lossy().into_owned();
+            log::error!("invalid shell path: {}", raw_path);
+            Err(AppError::InvalidShell { shell: raw_path })
         }
     }
 
     pub fn get_system_path() -> Result<String, AppError> {
-        let output = sh_output!("su -c 'echo $PATH'")?;
+        let output = sh_output!("su -c 'echo $PATH'").map_err(|e| {
+            log::error!("failed get raw system path: {}", e);
+            e
+        })?;
 
-        let stdout_raw = String::from_utf8(output.stdout)?;
+        let stdout_raw = String::from_utf8(output.stdout).map_err(|e| {
+            log::error!("failed decode raw system path to String: {}", e);
+            e
+        })?;
         let stdout = stdout_raw.trim().to_owned();
         Ok(stdout)
     }

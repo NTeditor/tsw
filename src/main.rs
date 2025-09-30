@@ -13,7 +13,7 @@ use crate::{error::AppError, termux::Termux};
 enum Commands {
     Exec {
         #[arg(num_args = 1.., required = true)]
-        args: Vec<String>
+        args: Vec<String>,
     },
 }
 
@@ -27,16 +27,31 @@ struct Cli {
 }
 
 fn main() -> Result<(), AppError> {
+    init_logger();
     let cli = Cli::parse();
     let mut command = match cli.command {
         Some(Commands::Exec { args }) => build_user_command(cli.shell, args),
         None => build_command(cli.shell),
     }?;
 
-    let mut child = command.spawn()?;
-    let status = child.wait()?;
+    let mut child = command.spawn().map_err(|e| {
+        log::error!("failed spawn process: {}", e);
+        e
+    })?;
+    let status = child.wait().map_err(|e| {
+        log::error!("failed wait end process: {}", e);
+        e
+    })?;
     let exit_code = status.code().unwrap_or(1);
     std::process::exit(exit_code);
+}
+
+fn init_logger() {
+    android_logger::init_once(
+        android_logger::Config::default()
+            .with_max_level(log::LevelFilter::Info)
+            .with_tag("tsw"),
+    );
 }
 
 fn build_command(shell_name: String) -> Result<Command, AppError> {

@@ -44,7 +44,7 @@ impl<P: ProcessRunner, E: EnvProvider> SuShell<P, E> {
         self.env.is_shell_exists(shell)?;
         let env_map = self.env.get_env_map().context("Failed to get env map")?;
         let su_path = self.env.get_su_path().context("Failed to get SU path")?;
-        let cmd = if self.command.is_empty() {
+        let cmd = if !self.command.is_empty() {
             let command = shlex::try_join(self.command.iter().map(|s| s.as_str()))
                 .context("Failed to escape command")?;
             Some(command)

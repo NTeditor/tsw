@@ -1,4 +1,6 @@
 pub mod termux;
+#[cfg(test)]
+mod test;
 
 use anyhow::{Context, Result};
 use std::collections::HashMap;

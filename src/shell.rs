@@ -23,14 +23,14 @@ pub trait EnvProvider: Debug {
 
 #[derive(Debug)]
 pub struct SuShell<P: ProcessRunner, E: EnvProvider> {
-    command: Option<Vec<String>>,
+    command: Vec<String>,
     shell: String,
     runner: P,
     env: E,
 }
 
 impl<P: ProcessRunner, E: EnvProvider> SuShell<P, E> {
-    pub fn new(command: Option<Vec<String>>, shell: String, runner: P, env: E) -> Self {
+    pub fn new(command: Vec<String>, shell: String, runner: P, env: E) -> Self {
         Self {
             command,
             shell,
@@ -44,8 +44,8 @@ impl<P: ProcessRunner, E: EnvProvider> SuShell<P, E> {
         self.env.is_shell_exists(shell)?;
         let env_map = self.env.get_env_map().context("Failed to get env map")?;
         let su_path = self.env.get_su_path().context("Failed to get SU path")?;
-        let cmd = if let Some(command) = &self.command {
-            let command = shlex::try_join(command.iter().map(|s| s.as_str()))
+        let cmd = if self.command.is_empty() {
+            let command = shlex::try_join(self.command.iter().map(|s| s.as_str()))
                 .context("Failed to escape command")?;
             Some(command)
         } else {

@@ -2,6 +2,9 @@
 name = "tsw"
 version = "0.2.0"
 edition = "2024"
+authors = ["NTeditor <nteditor4@gmail.com>"]
+description = "SU wrapper for termux"
+license = "GPL-v3.0-only"
 
 [dependencies]
 anyhow = { version = "1.0.100", features = ["backtrace"] }

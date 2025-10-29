@@ -5,6 +5,8 @@ edition = "2024"
 authors = ["NTeditor <nteditor4@gmail.com>"]
 description = "SU wrapper for termux"
 license = "GPL-v3.0-only"
+repository = "https://github.com/nteditor/tsw"
+readme = "README.md"
 
 [dependencies]
 anyhow = { version = "1.0.100", features = ["backtrace"] }

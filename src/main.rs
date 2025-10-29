@@ -29,12 +29,9 @@ fn main() -> Result<()> {
     }
 
     let cli = Cli::parse();
-    let shell = cli.shell.unwrap_or_else(|| {
-        env::var("TSW_SHELL").unwrap_or_else(|_| {
-            let default_shell = String::from("bash");
-            default_shell
-        })
-    });
+    let shell = cli
+        .shell
+        .unwrap_or_else(|| env::var("TSW_SHELL").unwrap_or(String::from("bash")));
 
     let runner = RootRunner::new();
     let env = TermuxEnv::new();

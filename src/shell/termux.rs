@@ -8,7 +8,7 @@ use std::process::Command;
 const TERMUX_FS: &str = "/data/data/com.termux/files";
 const DEFAULT_SU_PATH: &str = "/system/bin/su";
 const DEFAULT_HOME_PATH: &str = "root";
-const ROOT_PATH_ENV: &str =
+const DEFAULT_SYSPATH_ENV: &str =
     "/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/system/bin:/system/xbin";
 
 #[derive(Debug)]
@@ -98,7 +98,7 @@ impl EnvProvider for TermuxEnv {
         let path_env = if let Ok(path_env) = env::var("TSW_PATH_ENV") {
             path_env
         } else {
-            format!("{}/usr/bin:{}", TERMUX_FS, ROOT_PATH_ENV)
+            format!("{}/usr/bin:{}", TERMUX_FS, DEFAULT_SYSPATH_ENV)
         };
         env_map.insert("PATH", path_env);
 
@@ -164,6 +164,7 @@ impl ProcessRunner for RootRunner {
         proc.envs(envs);
         proc.arg("-i");
         proc.arg("-p");
+        proc.arg("-mm");
         proc.arg("--shell");
         proc.arg(shell);
         if let Some(command) = command {

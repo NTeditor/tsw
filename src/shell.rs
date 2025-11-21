@@ -1,4 +1,6 @@
+mod binding;
 pub mod termux;
+
 #[cfg(test)]
 mod test;
 

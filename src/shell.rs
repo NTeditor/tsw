@@ -9,6 +9,8 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::path::{Path, PathBuf};
 
+use crate::shell::binding::SuCmd;
+
 pub trait ProcessRunner: Debug {
     fn run(
         &self,
@@ -56,10 +58,14 @@ impl<P: ProcessRunner, E: EnvProvider> SuShell<P, E> {
             None
         };
 
-        let exit_code = self
-            .runner
-            .run(shell, cmd, &env_map, &su_path)
-            .context("Failed to run command")?;
+        let mut su_cmd = SuCmd::new(su_path);
+        su_cmd
+            .mount_master()
+            .set_envs(env_map)
+            .preserve_environment()
+            .shell(shell);
+
+        let exit_code = su_cmd.spawn_and_wait()?;
         Ok(exit_code)
     }
 }

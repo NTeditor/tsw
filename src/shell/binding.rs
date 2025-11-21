@@ -2,8 +2,15 @@ use std::{ffi::OsStr, path::Path, process::Command};
 
 use anyhow::{Ok, Result};
 
-struct SuCmd(Command);
+pub struct SuCmd(Command);
 impl SuCmd {
+    pub fn new<S>(su: S) -> Self
+    where
+        S: AsRef<OsStr>,
+    {
+        Self(Command::new(su))
+    }
+
     pub fn interactive(&mut self) -> &mut Self {
         self.0.arg("-i");
         self
@@ -19,6 +26,11 @@ impl SuCmd {
         S: AsRef<OsStr>,
     {
         self.0.arg("--shell").arg(shell);
+        self
+    }
+
+    pub fn preserve_environment(&mut self) -> &mut Self {
+        self.0.arg("--preserve-environment");
         self
     }
 

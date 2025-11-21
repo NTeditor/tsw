@@ -3,7 +3,7 @@ mod shell;
 use anyhow::{Result, bail};
 use clap::Parser;
 use shell::SuShell;
-use shell::termux::{RootRunner, TermuxEnv};
+use shell::termux::TermuxEnv;
 use std::{env, process};
 
 const AFTER_HELP: &str = "\
@@ -17,13 +17,14 @@ const AFTER_HELP: &str = "\
 struct Cli {
     /// Command to execute (interactive shell if omitted)
     #[arg(trailing_var_arg = true)]
-    command: Vec<String>,
+    command: Option<Vec<String>>,
     /// Shell to use with su [env: TSW_SHELL=] [default: bash]
     #[arg(short, long)]
     shell: Option<String>,
 }
 
 fn main() -> Result<()> {
+    env_logger::init();
     if !cfg!(target_os = "android") {
         bail!("This program for termux (android)");
     }
@@ -33,9 +34,8 @@ fn main() -> Result<()> {
         .shell
         .unwrap_or_else(|| env::var("TSW_SHELL").unwrap_or(String::from("bash")));
 
-    let runner = RootRunner::new();
     let env = TermuxEnv::new();
-    let su_shell = SuShell::new(cli.command, shell, runner, env);
+    let su_shell = SuShell::new(cli.command, shell, env);
     let exit_code = su_shell.run()?;
     if exit_code != 0 {
         process::exit(exit_code);

@@ -1,9 +1,8 @@
-use super::{EnvProvider, ProcessRunner};
+use super::EnvProvider;
 use anyhow::{Context, Result, bail};
 use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 const TERMUX_FS: &str = "/data/data/com.termux/files";
 const DEFAULT_SU_PATH: &str = "/system/bin/su";
@@ -140,41 +139,5 @@ impl EnvProvider for TermuxEnv {
         }
 
         bail!("Invalid shell. '{}' not found in $PATH", shell);
-    }
-}
-
-#[derive(Debug)]
-pub struct RootRunner;
-impl RootRunner {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl ProcessRunner for RootRunner {
-    fn run(
-        &self,
-        shell: &str,
-        command: Option<String>,
-        envs: &HashMap<&str, String>,
-        program: &Path,
-    ) -> Result<i32> {
-        let mut proc = Command::new(program);
-        proc.env_clear();
-        proc.envs(envs);
-        proc.arg("-i");
-        proc.arg("-p");
-        proc.arg("-mm");
-        proc.arg("--shell");
-        proc.arg(shell);
-        if let Some(command) = command {
-            proc.arg("-c");
-            proc.arg(command);
-        }
-
-        let mut child = proc.spawn()?;
-        let exit_status = child.wait()?;
-        let exit_code = exit_status.code().context("Failed get exit code")?;
-        Ok(exit_code)
     }
 }

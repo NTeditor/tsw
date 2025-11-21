@@ -11,4 +11,6 @@ readme = "README.md"
 [dependencies]
 anyhow = { version = "1.0.100", features = ["backtrace"] }
 clap = { version = "4.5.48", features = ["derive"] }
+env_logger = { version = "0.11.8", features = ["kv"] }
+log = { version = "0.4.28", features = ["kv"] }
 shlex = "1.3.0"

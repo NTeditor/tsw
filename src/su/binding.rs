@@ -2,7 +2,7 @@ use super::{SuBinding, SuBindingIsProvider, SuBindingRunner};
 use anyhow::{Context, Result, bail};
 use std::{
     fmt::Debug,
-    process::{Command, Output},
+    process::{Command, Output, Stdio},
 };
 
 #[derive(Debug)]
@@ -25,6 +25,7 @@ impl SuBinding for SuCmd {
         self
     }
 
+    /// Force create pty.
     fn interactive(&mut self) -> &mut Self {
         log::info!("Add -i flag to su command");
         self.0.arg("-i");
@@ -83,6 +84,9 @@ impl SuBinding for SuCmd {
 
 impl SuBindingRunner for SuCmd {
     fn spawn_and_wait(mut self) -> Result<i32> {
+        self.0.stdin(Stdio::inherit());
+        self.0.stdout(Stdio::inherit());
+        self.0.stderr(Stdio::inherit());
         let child = self.0.spawn()?;
         let output = child.wait_with_output()?;
         match output.status.code() {

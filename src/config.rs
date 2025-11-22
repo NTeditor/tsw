@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 pub const TERMUX_FS: &str = "/data/data/com.termux/files";
+const DEFAULT_SYSPATH_ENV: &str =
+    "/system/bin:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/system/bin:/system/xbin";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Config {
@@ -68,7 +70,7 @@ impl Default for Config {
             su_file: "/system/bin/su".into(),
             home_dir: format!("{}/root", TERMUX_FS).into(),
             shell: "bash".into(),
-            path_env: "/system/bin:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/system/bin:/system/xbin".to_string(),
+            path_env: format!("{}/usr/bin:{}", TERMUX_FS, DEFAULT_SYSPATH_ENV).to_string(),
         }
     }
 }

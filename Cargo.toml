@@ -1,6 +1,6 @@
 [package]
 name = "tsw"
-version = "0.3.0-alpha.1"
+version = "0.3.0-alpha.3"
 edition = "2024"
 authors = ["NTeditor <nteditor4@gmail.com>"]
 description = "SU wrapper for termux"
@@ -10,7 +10,10 @@ readme = "README.md"
 
 [dependencies]
 anyhow = { version = "1.0.100", features = ["backtrace"] }
+camino = { version = "1.2.1", features = ["serde1"] }
 clap = { version = "4.5.48", features = ["derive"] }
+confy = "2.0.0"
 env_logger = { version = "0.11.8", features = ["kv"] }
 log = { version = "0.4.28", features = ["kv"] }
+serde = { version = "1.0.228", features = ["derive"] }
 shlex = "1.3.0"

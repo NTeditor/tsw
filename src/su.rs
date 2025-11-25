@@ -2,13 +2,12 @@ mod binding;
 pub mod env;
 
 use anyhow::{Context, Result};
+use binding::*;
 use camino::Utf8Path;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::process::Output;
-
-use binding::SuCmd;
 
 pub trait EnvProvider: Debug {
     fn get_su_path(&self) -> Result<&Utf8Path>;
@@ -16,46 +15,59 @@ pub trait EnvProvider: Debug {
     fn get_shell_path(&self) -> Result<Cow<'_, Utf8Path>>;
 }
 
-trait SuBinding: Debug {
+pub trait SuBinding: Debug {
     fn help(&mut self) -> &mut Self;
     fn interactive(&mut self) -> &mut Self;
     fn mount_master(&mut self) -> &mut Self;
     fn preserve_environment(&mut self) -> &mut Self;
-    fn shell<S>(&mut self, shell: S) -> &mut Self
-    where
-        S: AsRef<str>;
-    fn command<S>(&mut self, command: S) -> &mut Self
-    where
-        S: AsRef<str>;
+    fn shell<S: AsRef<str>>(&mut self, shell: S) -> &mut Self;
+    fn command<S: AsRef<str>>(&mut self, command: S) -> &mut Self;
     fn set_envs<I, K, V>(&mut self, vars: I) -> &mut Self
     where
         I: IntoIterator<Item = (K, V)>,
         K: AsRef<str>,
         V: AsRef<str>;
-}
 
-trait SuBindingRunner: SuBinding {
     fn spawn_and_wait(self) -> Result<i32>;
     fn get_output(self) -> Result<Output>;
+    fn is_magisk<S: AsRef<str>>(su: S) -> Result<bool>;
 }
 
-trait SuBindingIsProvider: SuBindingRunner {
-    fn is_magisk<S>(su: S) -> Result<bool>
-    where
-        S: AsRef<str>;
+pub trait SuBindingFactory {
+    type Binding: SuBinding;
+    fn create<S: AsRef<str>>(&self, su: S) -> Self::Binding;
 }
 
 #[derive(Debug)]
-pub struct SuShell<E: EnvProvider> {
+pub struct SuShell<E, F>
+where
+    E: EnvProvider,
+    F: SuBindingFactory,
+{
     command: Option<Vec<String>>,
     env: E,
+    factory: F,
 }
 
-impl<E: EnvProvider> SuShell<E> {
+impl<E> SuShell<E, SuCmdFactory>
+where
+    E: EnvProvider,
+{
     pub fn new(command: Option<Vec<String>>, env: E) -> Self {
-        Self { command, env }
+        let factory = SuCmdFactory::new();
+        Self {
+            command,
+            env,
+            factory,
+        }
     }
+}
 
+impl<E, F> SuShell<E, F>
+where
+    E: EnvProvider,
+    F: SuBindingFactory,
+{
     pub fn run(&self) -> Result<i32> {
         let shell = &self
             .env
@@ -64,7 +76,7 @@ impl<E: EnvProvider> SuShell<E> {
         let env_map = self.env.get_env_map().context("Failed to get env map")?;
         let su_path = self.env.get_su_path().context("Failed to get SU path")?;
 
-        let mut su_cmd = SuCmd::new(su_path);
+        let mut su_cmd = self.factory.create(su_path);
         su_cmd
             .mount_master()
             .set_envs(env_map)

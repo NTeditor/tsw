@@ -1,17 +1,27 @@
-use super::{SuBinding, SuBindingIsProvider, SuBindingRunner};
+use super::{SuBinding, SuBindingFactory};
 use anyhow::{Context, Result, bail};
 use std::{
     fmt::Debug,
     process::{Command, Output, Stdio},
 };
 
+pub struct SuCmdFactory;
+impl SuCmdFactory {
+    pub fn new() -> Self {
+        Self
+    }
+}
+impl SuBindingFactory for SuCmdFactory {
+    type Binding = SuCmd;
+    fn create<S: AsRef<str>>(&self, su: S) -> Self::Binding {
+        SuCmd::new(su)
+    }
+}
+
 #[derive(Debug)]
 pub struct SuCmd(Command);
 impl SuCmd {
-    pub fn new<S>(su: S) -> Self
-    where
-        S: AsRef<str>,
-    {
+    pub fn new<S: AsRef<str>>(su: S) -> Self {
         let su = su.as_ref();
         log::info!(su_file = su; "Creating SuCmd");
         Self(Command::new(su))
@@ -38,10 +48,7 @@ impl SuBinding for SuCmd {
         self
     }
 
-    fn shell<S>(&mut self, shell: S) -> &mut Self
-    where
-        S: AsRef<str>,
-    {
+    fn shell<S: AsRef<str>>(&mut self, shell: S) -> &mut Self {
         let shell = shell.as_ref();
         log::info!(shell; "Add --shell flag to su command");
         self.0.arg("--shell").arg(shell);
@@ -54,10 +61,7 @@ impl SuBinding for SuCmd {
         self
     }
 
-    fn command<S>(&mut self, command: S) -> &mut Self
-    where
-        S: AsRef<str>,
-    {
+    fn command<S: AsRef<str>>(&mut self, command: S) -> &mut Self {
         let command = command.as_ref();
         log::info!(command; "Add -c flag to su command");
         self.0.arg("-c").arg(command);
@@ -80,9 +84,7 @@ impl SuBinding for SuCmd {
         }
         self
     }
-}
 
-impl SuBindingRunner for SuCmd {
     fn spawn_and_wait(mut self) -> Result<i32> {
         self.0.stdin(Stdio::inherit());
         self.0.stdout(Stdio::inherit());
@@ -109,13 +111,8 @@ impl SuBindingRunner for SuCmd {
         let output = self.0.output().context("Failed run su command")?;
         Ok(output)
     }
-}
 
-impl SuBindingIsProvider for SuCmd {
-    fn is_magisk<S>(su: S) -> Result<bool>
-    where
-        S: AsRef<str>,
-    {
+    fn is_magisk<S: AsRef<str>>(su: S) -> Result<bool> {
         let mut cmd = Self::new(su);
         cmd.help();
         let output = cmd.get_output()?;

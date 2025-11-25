@@ -70,7 +70,7 @@ impl Default for Config {
             su_file: "/system/bin/su".into(),
             home_dir: format!("{}/root", TERMUX_FS).into(),
             shell: "bash".into(),
-            path_env: format!("{}/usr/bin:{}", TERMUX_FS, DEFAULT_SYSPATH_ENV).to_string(),
+            path_env: format!("{}/usr/bin:{}", TERMUX_FS, DEFAULT_SYSPATH_ENV),
         }
     }
 }

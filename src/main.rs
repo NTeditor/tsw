@@ -30,14 +30,14 @@ struct Cli {
 fn main() -> Result<()> {
     env_logger::init();
     log::info!("Logger initialized");
+    log::info!("Parsing cli args");
+    let cli = Cli::parse();
     log::info!("Checking target os..");
     if !cfg!(target_os = "android") {
         bail!("This program for termux (android)");
     }
-    log::info!("Your system is android");
+    log::info!("Good, your system is android");
 
-    log::info!("Parsing cli args");
-    let cli = Cli::parse();
     log::info!("Loading config");
     let config: Config = confy::load_path(cli.config)?;
     log::info!("Creating env provider");

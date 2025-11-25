@@ -1,4 +1,4 @@
-use anyhow::{Ok, Result, bail};
+use anyhow::{Result, bail};
 use camino::{Utf8Path, Utf8PathBuf};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;

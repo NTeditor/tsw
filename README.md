@@ -1,4 +1,5 @@
 # Termux SU Wrapper
+[![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)  
 
 ```text
 SU wrapper for termux
@@ -9,12 +10,8 @@ Arguments:
   [COMMAND]...  Command to execute (interactive shell if omitted)
 
 Options:
-  -s, --shell <SHELL>  Shell to use with su [env: TSW_SHELL=] [default: bash]
-  -h, --help           Print help (see more with '--help')
-  -V, --version        Print version
-
-Environment variables:
-  TSW_SHELL       Shell to use with SU [default: bash]
-  TSW_SU_PATH     Path to su binary [default: /system/bin/su]
-  TSW_HOME_ENV    Root user home directory (relative to TERMUX_FS if relative) [default: root]
+  -s, --shell <SHELL>    Shell to use with su [default: bash]
+  -c, --config <CONFIG>  Path to config file [default: /data/data/com.termux/files/usr/etc/tsw.toml]
+  -h, --help             Print help
+  -V, --version          Print version
 ```

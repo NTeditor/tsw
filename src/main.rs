@@ -21,6 +21,8 @@ struct Cli {
     /// Shell to use with su [default: bash]
     #[arg(short, long)]
     shell: Option<Utf8PathBuf>,
+    #[arg(short, long)]
+    mount_master: Option<bool>,
     /// Path to config file
     #[arg(short, long)]
     #[arg(default_value = DEFAULT_CONFIG_PATH)]
@@ -32,6 +34,7 @@ fn main() -> Result<()> {
     log::info!("Logger initialized");
     log::info!("Parsing cli args");
     let cli = Cli::parse();
+    println!("{:#?}", cli);
     log::info!("Checking target os..");
     if !cfg!(target_os = "android") {
         bail!("This program for termux (android)");
@@ -41,7 +44,7 @@ fn main() -> Result<()> {
     log::info!("Loading config");
     let config: Config = confy::load_path(cli.config)?;
     log::info!("Creating env provider");
-    let env = TermuxEnv::new(config, cli.shell.clone());
+    let env = TermuxEnv::new(config, cli.shell.clone(), cli.mount_master);
 
     log::info!("Creating su shell");
     let su_shell = SuShell::new(cli.command, env);

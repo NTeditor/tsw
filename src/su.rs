@@ -7,7 +7,6 @@ use camino::Utf8Path;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::process::Output;
 
 pub trait EnvProvider: Debug {
     fn get_su_path(&self) -> Result<&Utf8Path>;
@@ -17,7 +16,6 @@ pub trait EnvProvider: Debug {
 }
 
 pub trait SuBinding: Debug {
-    fn help(&mut self) -> &mut Self;
     fn interactive(&mut self) -> &mut Self;
     fn mount_master(&mut self) -> &mut Self;
     fn preserve_environment(&mut self) -> &mut Self;
@@ -30,8 +28,7 @@ pub trait SuBinding: Debug {
         V: AsRef<str>;
 
     fn spawn_and_wait(self) -> Result<i32>;
-    fn get_output(self) -> Result<Output>;
-    fn is_magisk<S: AsRef<str>>(su: S) -> Result<bool>;
+    fn is_magisk(&self) -> Result<bool>;
 }
 
 pub trait SuBindingFactory {
@@ -83,7 +80,7 @@ where
             .shell(shell.as_str())
             .set_envs(env_map);
 
-        if SuCmd::is_magisk(su_path)? {
+        if su_cmd.is_magisk()? {
             su_cmd.interactive();
         }
 

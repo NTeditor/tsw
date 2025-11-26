@@ -1,8 +1,8 @@
 use super::{SuBinding, SuBindingFactory};
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 use std::{
     fmt::Debug,
-    process::{Command, Output, Stdio},
+    process::{Command, Stdio},
 };
 
 pub struct SuCmdFactory;
@@ -19,52 +19,62 @@ impl SuBindingFactory for SuCmdFactory {
 }
 
 #[derive(Debug)]
-pub struct SuCmd(Command);
+pub struct SuCmd {
+    file_path: String,
+    command: Vec<String>,
+    envs: Vec<(String, String)>,
+}
+
 impl SuCmd {
-    pub fn new<S: AsRef<str>>(su: S) -> Self {
-        let su = su.as_ref();
-        log::info!(su_file = su; "Creating SuCmd");
-        Self(Command::new(su))
+    pub fn new<S: AsRef<str>>(file_path: S) -> Self {
+        let file_path = file_path.as_ref();
+        log::info!(file_path; "Creating SuCmd");
+        Self {
+            file_path: file_path.to_string(),
+            command: Vec::new(),
+            envs: Vec::new(),
+        }
+    }
+
+    fn arg<S: AsRef<str>>(&mut self, arg: S) {
+        let arg = arg.as_ref();
+        self.command.push(arg.to_string());
     }
 }
 
 impl SuBinding for SuCmd {
-    fn help(&mut self) -> &mut Self {
-        log::info!("Add --help flag to su command");
-        self.0.arg("--help");
-        self
-    }
-
     /// Force create pty.
     fn interactive(&mut self) -> &mut Self {
         log::info!("Add -i flag to su command");
-        self.0.arg("-i");
+        self.arg("-i");
         self
     }
 
     fn mount_master(&mut self) -> &mut Self {
         log::info!("Add --mount-master flag to su command");
-        self.0.arg("--mount-master");
+        self.arg("--mount-master");
         self
     }
 
     fn shell<S: AsRef<str>>(&mut self, shell: S) -> &mut Self {
         let shell = shell.as_ref();
         log::info!(shell; "Add --shell flag to su command");
-        self.0.arg("--shell").arg(shell);
+        self.arg("--shell");
+        self.arg(shell);
         self
     }
 
     fn preserve_environment(&mut self) -> &mut Self {
         log::info!("Add --preserve-environment flag to su command");
-        self.0.arg("--preserve-environment");
+        self.arg("--preserve-environment");
         self
     }
 
     fn command<S: AsRef<str>>(&mut self, command: S) -> &mut Self {
         let command = command.as_ref();
         log::info!(command; "Add -c flag to su command");
-        self.0.arg("-c").arg(command);
+        self.arg("-c");
+        self.arg(command);
         self
     }
 
@@ -75,21 +85,22 @@ impl SuBinding for SuCmd {
         V: AsRef<str>,
     {
         log::info!("Cleaning env in su command");
-        self.0.env_clear();
+        self.envs.clear();
         for (k, v) in vars {
             let k = k.as_ref();
             let v = v.as_ref();
             log::info!(key = k, value = v; "Setting env var in su command");
-            self.0.env(k, v);
+            self.envs.push((k.to_string(), v.to_string()));
         }
         self
     }
 
-    fn spawn_and_wait(mut self) -> Result<i32> {
-        self.0.stdin(Stdio::inherit());
-        self.0.stdout(Stdio::inherit());
-        self.0.stderr(Stdio::inherit());
-        let child = self.0.spawn()?;
+    fn spawn_and_wait(self) -> Result<i32> {
+        let mut cmd = Command::new(&self.file_path);
+        cmd.stdin(Stdio::inherit());
+        cmd.stdout(Stdio::inherit());
+        cmd.stderr(Stdio::inherit());
+        let child = cmd.spawn()?;
         let output = child.wait_with_output()?;
         match output.status.code() {
             Some(0) => {
@@ -107,15 +118,10 @@ impl SuBinding for SuCmd {
         }
     }
 
-    fn get_output(mut self) -> Result<Output> {
-        let output = self.0.output().context("Failed run su command")?;
-        Ok(output)
-    }
-
-    fn is_magisk<S: AsRef<str>>(su: S) -> Result<bool> {
-        let mut cmd = Self::new(su);
-        cmd.help();
-        let output = cmd.get_output()?;
+    fn is_magisk(&self) -> Result<bool> {
+        let mut cmd = Command::new(&self.file_path);
+        cmd.arg("--help");
+        let output = cmd.output()?;
         if !output.status.success() {
             bail!("Failed execute su. Exit code is not null");
         }

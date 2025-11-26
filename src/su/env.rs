@@ -9,14 +9,16 @@ use std::env;
 #[derive(Debug)]
 pub struct TermuxEnv {
     config: Config,
-    override_shell: Option<Utf8PathBuf>,
+    shell: Option<Utf8PathBuf>,
+    master_namespace: Option<bool>,
 }
 
 impl TermuxEnv {
-    pub fn new(config: Config, override_shell: Option<Utf8PathBuf>) -> Self {
+    pub fn new(config: Config, shell: Option<Utf8PathBuf>, master_namespace: Option<bool>) -> Self {
         Self {
             config,
-            override_shell,
+            shell,
+            master_namespace,
         }
     }
 }
@@ -46,12 +48,20 @@ impl EnvProvider for TermuxEnv {
     }
 
     fn get_shell_path(&self) -> Result<Cow<'_, Utf8Path>> {
-        if let Some(shell) = &self.override_shell {
+        if let Some(shell) = &self.shell {
             let shell_path = to_absolute_path(shell).context("Invalid shell path")?;
             return Ok(shell_path.into());
         }
         let shell_path = self.config.get_shell_absolute(to_absolute_path)?;
         Ok(shell_path)
+    }
+
+    fn is_master_namespace(&self) -> bool {
+        if let Some(master_namespace) = self.master_namespace {
+            master_namespace
+        } else {
+            self.config.master_namespace
+        }
     }
 }
 

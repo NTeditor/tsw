@@ -13,6 +13,7 @@ pub struct Config {
     pub home_dir: Utf8PathBuf,
     pub shell: Utf8PathBuf,
     pub path_env: String,
+    pub master_namespace: bool,
 }
 
 impl Config {
@@ -71,6 +72,7 @@ impl Default for Config {
             home_dir: format!("{}/root", TERMUX_FS).into(),
             shell: "bash".into(),
             path_env: format!("{}/usr/bin:{}", TERMUX_FS, DEFAULT_SYSPATH_ENV),
+            master_namespace: false,
         }
     }
 }

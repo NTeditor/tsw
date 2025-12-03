@@ -4,7 +4,7 @@
 ```text
 SU wrapper for termux
 
-Usage: tsww [OPTIONS] [COMMAND]...
+Usage: tsw [OPTIONS] [COMMAND]...
 
 Arguments:
   [COMMAND]...  Command to execute (interactive shell if omitted)

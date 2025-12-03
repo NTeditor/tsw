@@ -7,7 +7,7 @@ pub const TERMUX_FS: &str = "/data/data/com.termux/files";
 const DEFAULT_SYSPATH_ENV: &str =
     "/system/bin:/debug_ramdisk:/sbin:/sbin/su:/su/bin:/su/xbin:/system/bin:/system/xbin";
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Config {
     pub su_file: Utf8PathBuf,
     pub home_dir: Utf8PathBuf,
@@ -23,7 +23,7 @@ impl Config {
         }
 
         if !self.su_file.exists() {
-            bail!("File doas not exists")
+            bail!("File does not exists")
         }
 
         if !self.su_file.is_file() {

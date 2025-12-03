@@ -21,6 +21,7 @@ struct Cli {
     /// Shell to use with su [default: bash]
     #[arg(short, long)]
     shell: Option<Utf8PathBuf>,
+    /// Force run in the global namespace
     #[arg(short, long)]
     mount_master: Option<bool>,
     /// Path to config file
@@ -34,7 +35,6 @@ fn main() -> Result<()> {
     log::info!("Logger initialized");
     log::info!("Parsing cli args");
     let cli = Cli::parse();
-    println!("{:#?}", cli);
     log::info!("Checking target os..");
     if !cfg!(target_os = "android") {
         bail!("This program for termux (android)");

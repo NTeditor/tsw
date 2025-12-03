@@ -16,10 +16,19 @@ pub trait EnvProvider: Debug {
 }
 
 pub trait SuBinding: Debug {
+    /// Force create pty.
     fn interactive(&mut self) -> &mut Self;
+
+    /// Force run in global namespace
     fn mount_master(&mut self) -> &mut Self;
+
+    /// Preserve the entire environment
     fn preserve_environment(&mut self) -> &mut Self;
+
+    /// Use SHELL instead of the default /system/bin/sh
     fn shell<S: AsRef<str>>(&mut self, shell: S) -> &mut Self;
+
+    /// Pass COMMAND to the invoked shell
     fn command<S: AsRef<str>>(&mut self, command: S) -> &mut Self;
     fn set_envs<I, K, V>(&mut self, vars: I) -> &mut Self
     where

@@ -43,7 +43,6 @@ impl SuCmd {
 }
 
 impl SuBinding for SuCmd {
-    /// Force create pty.
     fn interactive(&mut self) -> &mut Self {
         log::info!("Add -i flag to su command");
         self.arg("-i");

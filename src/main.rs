@@ -40,7 +40,7 @@ fn main() -> Result<()> {
     }
     log::info!("Good, your system is android");
 
-    log::info!("Loading config");
+    log::info!(config_path = cli.config.as_str(); "Loading config");
     let config: Config = confy::load_path(cli.config)?;
     log::info!("Creating env provider");
     let env = TermuxEnv::new(config, cli.shell.clone(), cli.mount_master);

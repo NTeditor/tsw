@@ -5,7 +5,6 @@ use anyhow::{Result, bail};
 use camino::Utf8PathBuf;
 use clap::Parser;
 use config::Config;
-use std::path::PathBuf;
 use std::process;
 use su::SuShell;
 use su::env::TermuxEnv;
@@ -27,7 +26,7 @@ struct Cli {
     /// Path to config file
     #[arg(short, long)]
     #[arg(default_value = DEFAULT_CONFIG_PATH)]
-    config: PathBuf,
+    config: Utf8PathBuf,
 }
 
 fn main() -> Result<()> {

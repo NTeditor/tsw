@@ -80,6 +80,7 @@ where
             .env
             .get_shell_path()
             .context("Failed to get shell path")?;
+        log::info!(shell_path = shell.as_str(); "shell");
         let env_map = self.env.get_env_map().context("Failed to get env map")?;
         let su_path = self.env.get_su_path().context("Failed to get SU path")?;
 

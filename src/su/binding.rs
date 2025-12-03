@@ -95,6 +95,7 @@ impl SuBinding for SuCmd {
     }
 
     fn spawn_and_wait(self) -> Result<i32> {
+        log::info!(args = format!("{:?}", self.command).as_str(); "Running su command");
         let mut cmd = Command::new(&self.file_path);
         cmd.stdin(Stdio::inherit());
         cmd.stdout(Stdio::inherit());

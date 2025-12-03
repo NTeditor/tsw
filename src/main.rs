@@ -8,6 +8,10 @@ use config::Config;
 use std::process;
 use su::SuShell;
 use su::env::TermuxEnv;
+use tracing_subscriber::fmt::time::ChronoUtc;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{EnvFilter, fmt};
 
 const DEFAULT_CONFIG_PATH: &str = "/data/data/com.termux/files/usr/etc/tsw.toml";
 
@@ -29,25 +33,53 @@ struct Cli {
     config: Utf8PathBuf,
 }
 
-fn main() -> Result<()> {
-    env_logger::init();
-    log::info!("Logger initialized");
-    log::info!("Parsing cli args");
-    let cli = Cli::parse();
-    log::info!("Checking target os..");
+fn check_os() -> Result<()> {
+    tracing::info!("Checking target os..");
     if !cfg!(target_os = "android") {
         bail!("This program for termux (android)");
     }
-    log::info!("Good, your system is android");
+    tracing::info!("Good, your system is android");
+    Ok(())
+}
 
-    log::info!(config_path = cli.config.as_str(); "Loading config");
-    let config: Config = confy::load_path(cli.config)?;
-    log::info!("Creating env provider");
-    let env = TermuxEnv::new(config, cli.shell.clone(), cli.mount_master);
+fn init_logger() {
+    let env_filter = EnvFilter::from_default_env();
+    let timer = ChronoUtc::new("%H:%M:%S".to_string());
+    let fmt_layer = fmt::layer()
+        .with_writer(std::io::stdout)
+        .with_ansi(true)
+        .with_target(true)
+        .with_timer(timer)
+        .compact();
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(fmt_layer)
+        .init();
+}
 
-    log::info!("Creating su shell");
-    let su_shell = SuShell::new(cli.command, env);
-    log::info!("Running su shell");
+fn main() -> Result<()> {
+    init_logger();
+    check_os()?;
+    tracing::info!("Parsing cli args");
+    let cli = Cli::parse();
+    tracing::info!(cli = ?cli, "Success parsed cli args");
+    let Cli {
+        command,
+        shell,
+        mount_master,
+        config: config_path,
+    } = cli;
+
+    tracing::info!(config_path = config_path.as_str(), "Loading config");
+    let config: Config = confy::load_path(config_path)?;
+
+    tracing::info!("Creating env provider");
+    let env = TermuxEnv::new(config, shell, mount_master);
+
+    tracing::info!("Creating su shell");
+    let su_shell = SuShell::new(command, env);
+
+    tracing::info!("Running su shell");
     let exit_code = su_shell.run()?;
     if exit_code != 0 {
         process::exit(exit_code);

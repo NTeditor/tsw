@@ -13,65 +13,65 @@ impl SuCmdFactory {
 }
 impl SuBindingFactory for SuCmdFactory {
     type Binding = SuCmd;
-    fn create<S: AsRef<str>>(&self, su: S) -> Self::Binding {
-        SuCmd::new(su)
+    fn create<S: AsRef<str>>(&self, su_path: S) -> Self::Binding {
+        SuCmd::new(su_path)
     }
 }
 
 #[derive(Debug)]
 pub struct SuCmd {
-    file_path: String,
-    command: Vec<String>,
+    path: String,
+    args: Vec<String>,
     envs: Vec<(String, String)>,
 }
 
 impl SuCmd {
-    pub fn new<S: AsRef<str>>(file_path: S) -> Self {
-        let file_path = file_path.as_ref();
-        log::info!(file_path; "Creating SuCmd");
+    pub fn new<S: AsRef<str>>(su_path: S) -> Self {
+        let path = su_path.as_ref();
+        tracing::info!(su_path = path, "Creating SuCmd instance");
         Self {
-            file_path: file_path.to_string(),
-            command: Vec::new(),
+            path: path.to_string(),
+            args: Vec::new(),
             envs: Vec::new(),
         }
     }
 
     fn arg<S: AsRef<str>>(&mut self, arg: S) {
         let arg = arg.as_ref();
-        self.command.push(arg.to_string());
+        self.args.push(arg.to_string());
     }
 }
 
 impl SuBinding for SuCmd {
     fn interactive(&mut self) -> &mut Self {
-        log::info!("Add -i flag to su command");
+        tracing::info!("Add -i flag to su command");
         self.arg("-i");
         self
     }
 
     fn mount_master(&mut self) -> &mut Self {
-        log::info!("Add --mount-master flag to su command");
+        tracing::info!("Add --mount-master flag to su command");
         self.arg("--mount-master");
         self
     }
 
     fn shell<S: AsRef<str>>(&mut self, shell: S) -> &mut Self {
         let shell = shell.as_ref();
-        log::info!(shell; "Add --shell flag to su command");
+        tracing::info!(shell = shell, "Add --shell flag to su command");
         self.arg("--shell");
         self.arg(shell);
         self
     }
 
     fn preserve_environment(&mut self) -> &mut Self {
-        log::info!("Add --preserve-environment flag to su command");
+        tracing::info!("Add --preserve-environment flag to su command");
         self.arg("--preserve-environment");
         self
     }
 
     fn command<S: AsRef<str>>(&mut self, command: S) -> &mut Self {
         let command = command.as_ref();
-        log::info!(command; "Add -c flag to su command");
+        tracing::info!(command = command, "Add -c flag to su command");
         self.arg("-c");
         self.arg(command);
         self
@@ -83,43 +83,50 @@ impl SuBinding for SuCmd {
         K: AsRef<str>,
         V: AsRef<str>,
     {
-        log::info!("Cleaning env in su command");
+        tracing::info!("Cleaning env in su command");
         self.envs.clear();
         for (k, v) in vars {
             let k = k.as_ref();
             let v = v.as_ref();
-            log::info!(key = k, value = v; "Setting env var in su command");
+            tracing::info!(key = k, value = v, "Setting env var in su command");
             self.envs.push((k.to_string(), v.to_string()));
         }
         self
     }
 
     fn spawn_and_wait(self) -> Result<i32> {
-        let mut cmd = Command::new(&self.file_path);
-        cmd.args(self.command);
+        tracing::info!(
+            su_path = ?self.path,
+            args = ?self.args,
+            envs = ?self.envs,
+            "Running su command"
+        );
+        let mut cmd = Command::new(&self.path);
+        cmd.args(self.args);
         cmd.stdin(Stdio::inherit());
         cmd.stdout(Stdio::inherit());
         cmd.stderr(Stdio::inherit());
+        tracing::info!(command = ?cmd, "Final command struct");
         let child = cmd.spawn()?;
         let output = child.wait_with_output()?;
         match output.status.code() {
             Some(0) => {
-                log::info!("Success execute su");
+                tracing::info!("The su process completed successfully");
                 Ok(0)
             }
             Some(v) => {
-                log::warn!(code = v; "su exit code is not null");
+                tracing::warn!(code = v, "The su process exited with a non-zero code");
                 Ok(v)
             }
             None => {
-                log::error!("Failed get su exit code, using default -1");
+                tracing::error!("Failed to get su exit code, using default -1");
                 Ok(-1)
             }
         }
     }
 
     fn is_magisk(&self) -> Result<bool> {
-        let mut cmd = Command::new(&self.file_path);
+        let mut cmd = Command::new(&self.path);
         cmd.arg("--help");
         let output = cmd.output()?;
         if !output.status.success() {
@@ -130,10 +137,10 @@ impl SuBinding for SuCmd {
 
         let output_str = String::from_utf8_lossy(&output.stdout).to_lowercase();
         if output_str.contains(MAGISK_PATTERN) {
-            log::info!("Found magisk pattern in stdout");
+            tracing::info!("Found magisk pattern in stdout");
             Ok(true)
         } else {
-            log::info!("Magisk pattern is not found in stdout");
+            tracing::info!("Magisk pattern is not found in stdout");
             Ok(false)
         }
     }

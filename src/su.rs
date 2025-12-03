@@ -76,13 +76,15 @@ where
     F: SuBindingFactory,
 {
     pub fn run(&self) -> Result<i32> {
+        let su_path = self.env.get_su_path().context("Failed to get SU path")?;
+        tracing::info!(su_path = su_path.as_str(), "Success get su path");
         let shell = &self
             .env
             .get_shell_path()
             .context("Failed to get shell path")?;
-        log::info!(shell_path = shell.as_str(); "shell");
+        tracing::info!(shell_path = shell.as_str(), "Success get shell path");
         let env_map = self.env.get_env_map().context("Failed to get env map")?;
-        let su_path = self.env.get_su_path().context("Failed to get SU path")?;
+        tracing::info!(env_map = ?env_map, "Success get env map");
 
         let mut su_cmd = self.factory.create(su_path);
         su_cmd

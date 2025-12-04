@@ -5,6 +5,33 @@ use std::{
     process::{Command, Stdio},
 };
 
+macro_rules! add_flag {
+    ($name:ident, $flag:expr) => {
+        fn $name(&mut self) -> &mut Self {
+            tracing::info!(flag = $flag, "Add {} flag to su command", stringify!($name));
+            self.arg($flag);
+            self
+        }
+    };
+}
+
+macro_rules! add_value_flag {
+    ($name:ident, $flag:expr) => {
+        fn $name<S: Into<String>>(&mut self, value: S) -> &mut Self {
+            let value = value.into();
+            tracing::info!(
+                flag = $flag,
+                value = value,
+                "Add {} flag to su command",
+                stringify!($name),
+            );
+            self.arg($flag);
+            self.arg(value);
+            self
+        }
+    };
+}
+
 pub struct SuCmdFactory;
 impl SuCmdFactory {
     pub fn new() -> Self {
@@ -43,39 +70,11 @@ impl SuCmd {
 }
 
 impl SuBinding for SuCmd {
-    fn interactive(&mut self) -> &mut Self {
-        tracing::info!("Add -i flag to su command");
-        self.arg("-i");
-        self
-    }
-
-    fn mount_master(&mut self) -> &mut Self {
-        tracing::info!("Add --mount-master flag to su command");
-        self.arg("--mount-master");
-        self
-    }
-
-    fn shell<S: Into<String>>(&mut self, shell: S) -> &mut Self {
-        let shell = shell.into();
-        tracing::info!(shell = shell, "Add --shell flag to su command");
-        self.arg("--shell");
-        self.arg(shell);
-        self
-    }
-
-    fn preserve_environment(&mut self) -> &mut Self {
-        tracing::info!("Add --preserve-environment flag to su command");
-        self.arg("--preserve-environment");
-        self
-    }
-
-    fn command<S: Into<String>>(&mut self, command: S) -> &mut Self {
-        let command = command.into();
-        tracing::info!(command = command, "Add -c flag to su command");
-        self.arg("-c");
-        self.arg(command);
-        self
-    }
+    add_flag!(interactive, "-i");
+    add_flag!(mount_master, "--mount-master");
+    add_flag!(preserve_environment, "--preserve-environment");
+    add_value_flag!(shell, "--shell");
+    add_value_flag!(command, "-c");
 
     fn set_envs<I, K, V>(&mut self, vars: I) -> &mut Self
     where
@@ -143,5 +142,63 @@ impl SuBinding for SuCmd {
             tracing::info!("Magisk pattern is not found in stdout");
             Ok(false)
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn it_new_works() {
+        const EXPECTED: &str = "/system/bin/su";
+        let binding = SuCmd::new(EXPECTED);
+        assert_eq!(binding.path.as_str(), EXPECTED);
+    }
+
+    #[test]
+    fn it_interactive_works() {
+        const EXPECTED: &[&str] = &["-i"];
+        let mut binding = SuCmd::new("/system/bin/su");
+        binding.interactive();
+        assert_eq!(binding.args.as_slice(), EXPECTED);
+    }
+
+    #[test]
+    fn it_shell_works() {
+        const EXPECTED: &[&str] = &["--shell", "/system/bin/sh"];
+        let mut binding = SuCmd::new("/system/bin/su");
+        binding.shell("/system/bin/sh");
+        assert_eq!(binding.args.as_slice(), EXPECTED);
+    }
+
+    #[test]
+    fn it_multiple_flags_work() {
+        const EXPECTED: &[&str] = &[
+            "-i",
+            "--mount-master",
+            "--preserve-environment",
+            "--shell",
+            "/system/bin/sh",
+        ];
+        let mut binding = SuCmd::new("/system/bin/su");
+        binding.interactive();
+        binding.mount_master();
+        binding.preserve_environment();
+        binding.shell("/system/bin/sh");
+        assert_eq!(binding.args.as_slice(), EXPECTED);
+    }
+
+    #[test]
+    fn it_set_envs_works() {
+        const EXPECTED: &[(&str, &str)] = &[("PATH", "/system/bin")];
+        let mut binding = SuCmd::new("/system/bin/su");
+        binding.set_envs(EXPECTED.iter().copied());
+        let result: Vec<(&str, &str)> = binding
+            .envs
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
+        assert_eq!(result, EXPECTED);
     }
 }

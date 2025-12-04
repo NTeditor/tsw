@@ -13,7 +13,7 @@ impl SuCmdFactory {
 }
 impl SuBindingFactory for SuCmdFactory {
     type Binding = SuCmd;
-    fn create<S: AsRef<str>>(&self, su_path: S) -> Self::Binding {
+    fn create<S: Into<String>>(&self, su_path: S) -> Self::Binding {
         SuCmd::new(su_path)
     }
 }
@@ -26,19 +26,19 @@ pub struct SuCmd {
 }
 
 impl SuCmd {
-    pub fn new<S: AsRef<str>>(su_path: S) -> Self {
-        let path = su_path.as_ref();
+    pub fn new<S: Into<String>>(su_path: S) -> Self {
+        let path = su_path.into();
         tracing::info!(su_path = path, "Creating SuCmd instance");
         Self {
-            path: path.to_string(),
+            path,
             args: Vec::new(),
             envs: Vec::new(),
         }
     }
 
-    fn arg<S: AsRef<str>>(&mut self, arg: S) {
-        let arg = arg.as_ref();
-        self.args.push(arg.to_string());
+    fn arg<S: Into<String>>(&mut self, arg: S) {
+        let arg = arg.into();
+        self.args.push(arg);
     }
 }
 
@@ -55,8 +55,8 @@ impl SuBinding for SuCmd {
         self
     }
 
-    fn shell<S: AsRef<str>>(&mut self, shell: S) -> &mut Self {
-        let shell = shell.as_ref();
+    fn shell<S: Into<String>>(&mut self, shell: S) -> &mut Self {
+        let shell = shell.into();
         tracing::info!(shell = shell, "Add --shell flag to su command");
         self.arg("--shell");
         self.arg(shell);
@@ -69,8 +69,8 @@ impl SuBinding for SuCmd {
         self
     }
 
-    fn command<S: AsRef<str>>(&mut self, command: S) -> &mut Self {
-        let command = command.as_ref();
+    fn command<S: Into<String>>(&mut self, command: S) -> &mut Self {
+        let command = command.into();
         tracing::info!(command = command, "Add -c flag to su command");
         self.arg("-c");
         self.arg(command);
@@ -80,16 +80,16 @@ impl SuBinding for SuCmd {
     fn set_envs<I, K, V>(&mut self, vars: I) -> &mut Self
     where
         I: IntoIterator<Item = (K, V)>,
-        K: AsRef<str>,
-        V: AsRef<str>,
+        K: Into<String>,
+        V: Into<String>,
     {
         tracing::info!("Cleaning env in su command");
         self.envs.clear();
         for (k, v) in vars {
-            let k = k.as_ref();
-            let v = v.as_ref();
+            let k = k.into();
+            let v = v.into();
             tracing::info!(key = k, value = v, "Setting env var in su command");
-            self.envs.push((k.to_string(), v.to_string()));
+            self.envs.push((k, v));
         }
         self
     }

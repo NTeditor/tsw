@@ -1,0 +1,12 @@
+[package]
+name = "build_deb"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+anyhow = "1.0.100"
+cargo_metadata = "0.23.1"
+clap = { version = "4.5.53", features = ["derive"] }
+deb-rust = { git = "https://github.com/NTeditor/deb-rust", version = "0.1.3", tag = "v0.1.3" }
+which = "8.0.0"

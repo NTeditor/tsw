@@ -134,7 +134,6 @@ dependencies = [
  "anyhow",
  "cargo_metadata",
  "clap",
- "constcat",
  "deb-rust",
  "which",
 ]
@@ -266,12 +265,6 @@ dependencies = [
  "thiserror",
  "toml",
 ]
-
-[[package]]
-name = "constcat"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "136d3e02915a2cea4d74caa8681e2d44b1c3254bdbf17d11d41d587ff858832c"
 
 [[package]]
 name = "core-foundation-sys"
@@ -1033,7 +1026,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

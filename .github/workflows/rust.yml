@@ -16,8 +16,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Build
+      run: cargo build --verbose
     - name: Clippy
-      run: cargo clippy --workspace -- -Dwarnings
+      run: cargo clippy -- -Dwarnings
     - name: Test 
-      run: cargo test --workspace --verbose
+      run: cargo test --verbose
       if: always()

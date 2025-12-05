@@ -1,16 +1,6 @@
 use anyhow::{Result, bail};
 use std::process::{Command, Stdio};
 
-macro_rules! add_flag {
-    ($name:ident, $flag:expr) => {
-        pub fn $name(&mut self) -> &mut Self {
-            self.arg($flag);
-            self
-        }
-    };
-}
-
-#[derive(Debug)]
 pub struct CargoCmd {
     path: String,
     args: Vec<String>,
@@ -30,12 +20,13 @@ impl CargoCmd {
         self.args.push(value);
     }
 
-    add_flag!(build, "build");
-    add_flag!(release, "--release");
+    pub fn ndk(&mut self) -> &mut Self {
+        self.arg("ndk");
+        self
+    }
 
-    pub fn cargo_subcommand<S: Into<String>>(&mut self, subcommand: S) -> &mut Self {
-        let subcommand = subcommand.into();
-        self.arg(subcommand);
+    pub fn build(&mut self) -> &mut Self {
+        self.arg("build");
         self
     }
 
@@ -43,6 +34,11 @@ impl CargoCmd {
         let target = target.into();
         self.arg("--target");
         self.arg(target);
+        self
+    }
+
+    pub fn release(&mut self) -> &mut Self {
+        self.arg("--release");
         self
     }
 
@@ -56,7 +52,7 @@ impl CargoCmd {
         let child = cmd.spawn()?;
         let output = child.wait_with_output()?;
         if !output.status.success() {
-            bail!("The cargo process exited with a non-zero code");
+            bail!("exitcode non-zero");
         }
         Ok(())
     }

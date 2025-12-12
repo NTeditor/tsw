@@ -106,7 +106,13 @@ impl SuBinding for SuCmd {
         cmd.stdin(Stdio::inherit());
         cmd.stdout(Stdio::inherit());
         cmd.stderr(Stdio::inherit());
-        tracing::info!(command = ?cmd, "Final command struct");
+        cmd.envs(self.envs);
+        tracing::info!(
+            program = ?cmd.get_program(),
+            args = ?cmd.get_args(),
+            envs = ?cmd.get_envs(),
+            "Final command struct"
+        );
         let child = cmd.spawn()?;
         let output = child.wait_with_output()?;
         match output.status.code() {

@@ -1,5 +1,14 @@
 # Termux SU Wrapper
+
 [![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)  
+
+## Installing
+
+```bash
+apt install rust
+cargo install tsw
+# And add '~/.cargo/bin' in $PATH
+```
 
 ## Supported
 
@@ -44,4 +53,5 @@ mount_master = false
 ```
 
 ## License
+
 The project is licensed under the [GPL 3.0 License](LICENSE).

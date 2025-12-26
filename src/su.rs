@@ -10,7 +10,7 @@ use tracing::info;
 
 pub trait EnvProvider: Debug {
     fn get_su_path(&self) -> Result<&Utf8Path>;
-    fn get_env_map<'a>(&'a self) -> Result<HashMap<&'a str, String>>;
+    fn get_env_map(&self) -> Result<HashMap<&str, String>>;
     fn get_shell_path(&self) -> Result<Utf8PathBuf>;
     fn is_master_namespace(&self) -> bool;
 }

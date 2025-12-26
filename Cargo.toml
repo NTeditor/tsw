@@ -1,6 +1,6 @@
 [package]
 name = "tsw"
-version = "0.3.1"
+version = "0.3.2-rc.1"
 edition = "2024"
 keywords = ["termux", "su", "root", "android"]
 categories = ["command-line-utilities", "os::android"]

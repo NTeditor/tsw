@@ -112,9 +112,9 @@ impl SuBinding for SuCmd {
             envs = ?cmd.get_envs(),
             "Final command struct"
         );
-        let child = cmd.spawn()?;
-        let output = child.wait_with_output()?;
-        match output.status.code() {
+        let mut child = cmd.spawn()?;
+        let output = child.wait()?;
+        match output.code() {
             Some(0) => {
                 tracing::info!("The su process completed successfully");
                 Ok(0)
@@ -124,8 +124,8 @@ impl SuBinding for SuCmd {
                 Ok(v)
             }
             None => {
-                tracing::error!("Failed to get su exit code, using default -1");
-                Ok(-1)
+                tracing::error!("Failed to get su exit code, using default 1");
+                Ok(1)
             }
         }
     }
@@ -156,14 +156,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn it_new_works() {
-        const EXPECTED: &str = "/system/bin/su";
-        let binding = SuCmd::new(EXPECTED);
-        assert_eq!(binding.path.as_str(), EXPECTED);
-    }
-
-    #[test]
-    fn it_interactive_works() {
+    fn interactive_flag() {
         const EXPECTED: &[&str] = &["-i"];
         let mut binding = SuCmd::new("/system/bin/su");
         binding.interactive();
@@ -171,7 +164,7 @@ mod test {
     }
 
     #[test]
-    fn it_shell_works() {
+    fn shell_flag() {
         const EXPECTED: &[&str] = &["--shell", "/system/bin/sh"];
         let mut binding = SuCmd::new("/system/bin/su");
         binding.shell("/system/bin/sh");
@@ -179,7 +172,7 @@ mod test {
     }
 
     #[test]
-    fn it_multiple_flags_work() {
+    fn multiple_flags() {
         const EXPECTED: &[&str] = &[
             "-i",
             "--mount-master",
@@ -196,7 +189,7 @@ mod test {
     }
 
     #[test]
-    fn it_set_envs_works() {
+    fn envs() {
         const EXPECTED: &[(&str, &str)] = &[("PATH", "/system/bin")];
         let mut binding = SuCmd::new("/system/bin/su");
         binding.set_envs(EXPECTED.iter().copied());

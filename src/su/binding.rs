@@ -4,7 +4,10 @@ use std::{
     fmt::Debug,
     process::{Command, Stdio},
 };
-use tracing::{error, info, warn};
+use tracing::{info, warn};
+
+const MAGISK_PATTERN: &str = "magisksu";
+const DEFAULT_EXIT_CODE: i32 = 1;
 
 macro_rules! add_flag {
     ($name:ident, $flag:expr) => {
@@ -116,9 +119,9 @@ impl SuBinding for SuCmd {
             "Final command struct"
         );
 
-        info!("Spawn child su process");
+        info!("Spawning child su process");
         let mut child = cmd.spawn()?;
-        info!("Wait to completed child su process");
+        info!("Waiting for child su process to complete");
         let output = child.wait()?;
         match output.code() {
             Some(0) => {
@@ -130,8 +133,11 @@ impl SuBinding for SuCmd {
                 Ok(v)
             }
             None => {
-                error!("Failed to get su exit code, using default 1");
-                Ok(1)
+                warn!(
+                    default_exit_code = DEFAULT_EXIT_CODE,
+                    "Failed to get su exit code, using default exit code"
+                );
+                Ok(DEFAULT_EXIT_CODE)
             }
         }
     }
@@ -143,8 +149,6 @@ impl SuBinding for SuCmd {
         if !output.status.success() {
             bail!("Failed execute su. Exit code is not null");
         }
-
-        const MAGISK_PATTERN: &str = "magisk";
 
         let output_str = String::from_utf8_lossy(&output.stdout).to_lowercase();
         if output_str.contains(MAGISK_PATTERN) {

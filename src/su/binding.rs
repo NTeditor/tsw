@@ -4,11 +4,12 @@ use std::{
     fmt::Debug,
     process::{Command, Stdio},
 };
+use tracing::{error, info, warn};
 
 macro_rules! add_flag {
     ($name:ident, $flag:expr) => {
         fn $name(&mut self) -> &mut Self {
-            tracing::info!(flag = $flag, "Add {} flag to su command", stringify!($name));
+            info!(flag = $flag, "Add {} flag to su command", stringify!($name));
             self.arg($flag);
             self
         }
@@ -19,7 +20,7 @@ macro_rules! add_value_flag {
     ($name:ident, $flag:expr) => {
         fn $name<S: Into<String>>(&mut self, value: S) -> &mut Self {
             let value = value.into();
-            tracing::info!(
+            info!(
                 flag = $flag,
                 value = value,
                 "Add {} flag to su command",
@@ -55,7 +56,7 @@ pub struct SuCmd {
 impl SuCmd {
     pub fn new<S: Into<String>>(su_path: S) -> Self {
         let path = su_path.into();
-        tracing::info!(su_path = path, "Creating SuCmd instance");
+        info!(su_path = path, "Creating SuCmd instance");
         Self {
             path,
             args: Vec::new(),
@@ -82,49 +83,54 @@ impl SuBinding for SuCmd {
         K: Into<String>,
         V: Into<String>,
     {
-        tracing::info!("Cleaning env in su command");
+        info!("Cleaning env in su command");
         self.envs.clear();
         for (k, v) in vars {
             let k = k.into();
             let v = v.into();
-            tracing::info!(key = k, value = v, "Setting env var in su command");
+            info!(key = k, value = v, "Setting env var in su command");
             self.envs.push((k, v));
         }
         self
     }
 
+    #[tracing::instrument]
     fn spawn_and_wait(self) -> Result<i32> {
-        tracing::info!(
+        info!(
             su_path = ?self.path,
             args = ?self.args,
             envs = ?self.envs,
             "Running su command"
         );
         let mut cmd = Command::new(&self.path);
-        cmd.args(self.args);
-        cmd.stdin(Stdio::inherit());
-        cmd.stdout(Stdio::inherit());
-        cmd.stderr(Stdio::inherit());
-        cmd.envs(self.envs);
-        tracing::info!(
+        cmd.args(self.args)
+            .stdin(Stdio::inherit())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
+            .env_clear()
+            .envs(self.envs);
+        info!(
             program = ?cmd.get_program(),
             args = ?cmd.get_args(),
             envs = ?cmd.get_envs(),
             "Final command struct"
         );
+
+        info!("Spawn child su process");
         let mut child = cmd.spawn()?;
+        info!("Wait to completed child su process");
         let output = child.wait()?;
         match output.code() {
             Some(0) => {
-                tracing::info!("The su process completed successfully");
+                info!("The su process completed successfully");
                 Ok(0)
             }
             Some(v) => {
-                tracing::warn!(code = v, "The su process exited with a non-zero code");
+                warn!(code = v, "The su process exited with a non-zero code");
                 Ok(v)
             }
             None => {
-                tracing::error!("Failed to get su exit code, using default 1");
+                error!("Failed to get su exit code, using default 1");
                 Ok(1)
             }
         }
@@ -142,10 +148,10 @@ impl SuBinding for SuCmd {
 
         let output_str = String::from_utf8_lossy(&output.stdout).to_lowercase();
         if output_str.contains(MAGISK_PATTERN) {
-            tracing::info!("Found magisk pattern in stdout");
+            info!("Found magisk pattern in stdout");
             Ok(true)
         } else {
-            tracing::info!("Magisk pattern is not found in stdout");
+            info!("Magisk pattern is not found in stdout");
             Ok(false)
         }
     }

@@ -41,6 +41,7 @@ impl EnvProvider for TermuxEnv {
         Ok(&self.config.su_file)
     }
 
+    #[tracing::instrument]
     fn get_env_map(&self) -> Result<HashMap<&str, String>> {
         let mut env_map: HashMap<&str, String> = HashMap::new();
 
@@ -67,7 +68,7 @@ impl EnvProvider for TermuxEnv {
             let fallback = format!("{}/usr", TERMUX_FS);
             warn!(
                 err = e.to_string(),
-                "failed to get '$PREFIX' variable. fallback to '{}/usr'", fallback
+                "Failed to get '$PREFIX' variable. fallback to '{}/usr'", fallback
             );
             fallback
         });
@@ -76,7 +77,7 @@ impl EnvProvider for TermuxEnv {
             let fallback = format!("{}/usr/lib/libtermux-exec-ld-preload.so", TERMUX_FS);
             warn!(
                 err = e.to_string(),
-                "failed to get '$LD_PRELOAD' variable. fallback to '{}'", fallback
+                "Failed to get '$LD_PRELOAD' variable. fallback to '{}'", fallback
             );
             fallback
         });

@@ -34,6 +34,15 @@ struct Cli {
     config: Utf8PathBuf,
 }
 
+fn check_os() -> Result<()> {
+    info!("Checking target os..");
+    if !cfg!(target_os = "android") {
+        bail!("This program for termux (android)");
+    }
+    info!("Good, your system is android");
+    Ok(())
+}
+
 fn init_logger() {
     let env_filter = EnvFilter::from_default_env();
     let timer = ChronoUtc::new("%H:%M:%S".to_string());
@@ -49,14 +58,9 @@ fn init_logger() {
         .init();
 }
 
-#[cfg(not(target_os = "android"))]
-fn main() -> Result<()> {
-    bail!("This program for termux (android)");
-}
-
-#[cfg(target_os = "android")]
 fn main() -> Result<()> {
     init_logger();
+    check_os()?;
     info!("Parsing cli args");
     let cli = Cli::parse();
     info!(cli = ?cli, "Success parsed cli args");

@@ -97,7 +97,7 @@ impl SuBinding for SuCmd {
         self
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(skip(self))]
     fn spawn_and_wait(self) -> Result<i32> {
         info!(
             su_path = ?self.path,

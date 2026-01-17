@@ -8,7 +8,7 @@ use config::Config;
 use std::process;
 use su::SuShell;
 use su::env::TermuxEnv;
-use tracing::info;
+use tracing::{debug, info};
 use tracing_subscriber::fmt::time::ChronoUtc;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -79,10 +79,10 @@ fn main() -> Result<()> {
     info!(config_path = config_path.as_str(), "Loading config");
     let config: Config = confy::load_path(config_path)?;
 
-    info!("Creating env provider");
+    debug!("Creating env provider");
     let env = TermuxEnv::new(config, shell, mount_master);
 
-    info!("Creating su shell");
+    debug!("Creating su shell");
     let su_shell = SuShell::new(command, env);
 
     info!("Running su shell");

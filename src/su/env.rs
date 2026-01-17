@@ -56,24 +56,36 @@ impl EnvProvider for TermuxEnv {
         let home_env = home_path.to_string();
         let path_env = self.config.path_env.clone();
         let term_env = env::var("TERM").unwrap_or_else(|e| {
+            let fallback = String::from("xterm-256color");
             warn!(
                 err = e.to_string(),
-                "Failed to get '$TERM' variable. Fallback to 'xterm-256color'"
+                "Failed to get '$TERM' variable. Fallback to '{}'", fallback
             );
-            String::from("xterm-256color")
+            fallback
         });
         let prefix_env = env::var("PREFIX").unwrap_or_else(|e| {
+            let fallback = format!("{}/usr", TERMUX_FS);
             warn!(
                 err = e.to_string(),
-                "Failed to get '$PREFIX' variable. Fallback to '{TERMUX_FS}/usr'"
+                "failed to get '$PREFIX' variable. fallback to '{}/usr'", fallback
             );
-            format!("{}/usr", TERMUX_FS)
+            fallback
+        });
+
+        let ld_preload_env = env::var("LD_PRELOAD").unwrap_or_else(|e| {
+            let fallback = format!("{}/usr/lib/libtermux-exec-ld-preload.so", TERMUX_FS);
+            warn!(
+                err = e.to_string(),
+                "failed to get '$LD_PRELOAD' variable. fallback to '{}'", fallback
+            );
+            fallback
         });
 
         env_map.insert("HOME", home_env);
         env_map.insert("PATH", path_env);
         env_map.insert("TERM", term_env);
         env_map.insert("PREFIX", prefix_env);
+        env_map.insert("LD_PRELOAD", ld_preload_env);
         Ok(env_map)
     }
 

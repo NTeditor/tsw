@@ -46,7 +46,7 @@ fn check_os() -> Result<()> {
 fn init_logger() {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         #[cfg(not(debug_assertions))]
-        return EnvFilter::new("warn");
+        return EnvFilter::new("error");
         #[cfg(debug_assertions)]
         return EnvFilter::new("debug");
     });

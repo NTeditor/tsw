@@ -65,6 +65,15 @@ impl SuCmd {
         let arg = arg.into();
         self.args.push(arg);
     }
+
+    fn setup_cmd(self, cmd: &mut Command) {
+        cmd.args(self.args);
+        cmd.env_clear();
+        cmd.envs(self.envs);
+        cmd.stdin(Stdio::inherit());
+        cmd.stdout(Stdio::inherit());
+        cmd.stderr(Stdio::inherit());
+    }
 }
 
 impl SuBinding for SuCmd {
@@ -101,19 +110,7 @@ impl SuBinding for SuCmd {
             "Running su command"
         );
         let mut cmd = Command::new(&self.path);
-        cmd.args(self.args)
-            .stdin(Stdio::inherit())
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .env_clear()
-            .envs(self.envs);
-        info!(
-            program = ?cmd.get_program(),
-            args = ?cmd.get_args(),
-            envs = ?cmd.get_envs(),
-            "Final command struct"
-        );
-
+        self.setup_cmd(&mut cmd);
         info!("Spawning child su process");
         let mut child = cmd.spawn()?;
         info!("Waiting for child su process to complete");
@@ -159,6 +156,7 @@ impl SuBinding for SuCmd {
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::collections::HashSet;
 
     #[test]
     fn interactive_flag() {
@@ -204,5 +202,30 @@ mod test {
             .map(|(k, v)| (k.as_str(), v.as_str()))
             .collect();
         assert_eq!(result, EXPECTED);
+    }
+
+    #[test]
+    fn setup_cmd() {
+        const EXPECTED_ENVS: &[(&str, &str)] = &[("PATH", "/system/bin"), ("HOME", "/root")];
+        const EXPECTED_ARGS: &[&str] = &["-i", "--mount-master", "-c", "ls"];
+        let mut cmd = Command::new("/system/bin/su");
+        let mut binding = SuCmd::new("/system/bin/su");
+        binding.interactive().mount_master().command("ls");
+        binding.set_envs(EXPECTED_ENVS.iter().copied());
+        binding.setup_cmd(&mut cmd);
+
+        let result_args: Vec<&str> = cmd.get_args().map(|s| s.to_str().unwrap()).collect();
+        assert_eq!(result_args, EXPECTED_ARGS);
+
+        let result_envs: HashSet<(&str, &str)> = cmd
+            .get_envs()
+            .map(|(k, v)| {
+                let k = k.to_str().unwrap();
+                let v = v.unwrap().to_str().unwrap();
+                (k, v)
+            })
+            .collect();
+        let expected_envs: HashSet<(&str, &str)> = EXPECTED_ENVS.iter().copied().collect();
+        assert_eq!(result_envs, expected_envs);
     }
 }

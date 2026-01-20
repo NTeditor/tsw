@@ -12,7 +12,7 @@ const DEFAULT_EXIT_CODE: i32 = 1;
 macro_rules! add_flag {
     ($name:ident, $flag:expr) => {
         fn $name(&mut self) -> &mut Self {
-            info!(flag = $flag, "Add {} flag to su command", stringify!($name));
+            info!(flag = $flag, "Add flag to su command");
             self.arg($flag);
             self
         }
@@ -23,12 +23,7 @@ macro_rules! add_value_flag {
     ($name:ident, $flag:expr) => {
         fn $name<S: Into<String>>(&mut self, value: S) -> &mut Self {
             let value = value.into();
-            info!(
-                flag = $flag,
-                value = value,
-                "Add {} flag to su command",
-                stringify!($name),
-            );
+            info!(flag = $flag, value = value, "Add flag to su command");
             self.arg($flag);
             self.arg(value);
             self

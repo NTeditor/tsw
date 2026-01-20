@@ -4,7 +4,7 @@ use std::{
     fmt::Debug,
     process::{Command, Stdio},
 };
-use tracing::{info, warn};
+use tracing::{debug, info, warn};
 
 const MAGISK_PATTERN: &str = "magisksu";
 const DEFAULT_EXIT_CODE: i32 = 1;
@@ -12,7 +12,7 @@ const DEFAULT_EXIT_CODE: i32 = 1;
 macro_rules! add_flag {
     ($name:ident, $flag:expr) => {
         fn $name(&mut self) -> &mut Self {
-            info!(flag = $flag, "Add flag to su command");
+            debug!(flag = $flag, "Add flag to command");
             self.arg($flag);
             self
         }
@@ -23,7 +23,7 @@ macro_rules! add_value_flag {
     ($name:ident, $flag:expr) => {
         fn $name<S: Into<String>>(&mut self, value: S) -> &mut Self {
             let value = value.into();
-            info!(flag = $flag, value = value, "Add flag to su command");
+            debug!(flag = $flag, value = value, "Add flag to command");
             self.arg($flag);
             self.arg(value);
             self
@@ -54,7 +54,6 @@ pub struct SuCmd {
 impl SuCmd {
     pub fn new<S: Into<String>>(su_path: S) -> Self {
         let path = su_path.into();
-        info!(su_path = path, "Creating SuCmd instance");
         Self {
             path,
             args: Vec::new(),
@@ -81,12 +80,13 @@ impl SuBinding for SuCmd {
         K: Into<String>,
         V: Into<String>,
     {
-        info!("Cleaning env in su command");
+        info!("Cleaning environment variable to vector");
         self.envs.clear();
+        info!("Pushing environment variable to vector");
         for (k, v) in vars {
             let k = k.into();
             let v = v.into();
-            info!(key = k, value = v, "Setting env var in su command");
+            debug!(key = k, value = v, "Push environment variable to vector");
             self.envs.push((k, v));
         }
         self

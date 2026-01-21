@@ -22,6 +22,22 @@ impl TermuxEnv {
             master_namespace,
         }
     }
+
+    fn add_env_var<'a, S>(env_map: &mut HashMap<&'a str, String>, var: &'a str, fallback: S)
+    where
+        S: Into<String>,
+    {
+        let env_var = env::var(var).unwrap_or_else(|e| {
+            let fallback = fallback.into();
+            warn!(
+                err = e.to_string(),
+                "Failed to get '${}' variable. Fallback to '{}'", var, fallback
+            );
+            fallback
+        });
+
+        env_map.insert(var, env_var);
+    }
 }
 
 impl EnvProvider for TermuxEnv {
@@ -56,37 +72,10 @@ impl EnvProvider for TermuxEnv {
 
         let home_env = home_path.to_string();
         let path_env = self.config.path_env.clone();
-        let term_env = env::var("TERM").unwrap_or_else(|e| {
-            let fallback = String::from("xterm-256color");
-            warn!(
-                err = e.to_string(),
-                "Failed to get '$TERM' variable. Fallback to '{}'", fallback
-            );
-            fallback
-        });
-        let prefix_env = env::var("PREFIX").unwrap_or_else(|e| {
-            let fallback = format!("{}/usr", TERMUX_FS);
-            warn!(
-                err = e.to_string(),
-                "Failed to get '$PREFIX' variable. fallback to '{}/usr'", fallback
-            );
-            fallback
-        });
-
-        let ld_preload_env = env::var("LD_PRELOAD").unwrap_or_else(|e| {
-            let fallback = format!("{}/usr/lib/libtermux-exec-ld-preload.so", TERMUX_FS);
-            warn!(
-                err = e.to_string(),
-                "Failed to get '$LD_PRELOAD' variable. fallback to '{}'", fallback
-            );
-            fallback
-        });
-
+        Self::add_env_var(&mut env_map, "TERM", "xterm-256color");
+        Self::add_env_var(&mut env_map, "PREFIX", format!("{}/usr", TERMUX_FS));
         env_map.insert("HOME", home_env);
         env_map.insert("PATH", path_env);
-        env_map.insert("TERM", term_env);
-        env_map.insert("PREFIX", prefix_env);
-        env_map.insert("LD_PRELOAD", ld_preload_env);
         Ok(env_map)
     }
 

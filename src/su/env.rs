@@ -1,7 +1,7 @@
 use super::EnvProvider;
 use crate::config::{Config, TERMUX_FS};
 use anyhow::{Context, Result, bail};
-use camino::{Utf8Path, Utf8PathBuf};
+use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
 use std::collections::HashMap;
 use std::env;
 use tracing::warn;
@@ -92,6 +92,11 @@ impl EnvProvider for TermuxEnv {
 
     fn get_shell_path(&self) -> Result<Utf8PathBuf> {
         let shell = self.shell.as_deref().unwrap_or(&self.config.shell);
+        let components: Vec<_> = shell.components().collect();
+        if components.len() == 0 {
+            bail!("The path cannot be empty. Specify a file name or absolute path");
+        }
+
         if shell.is_absolute() {
             if !shell.exists() {
                 bail!("Shell does not exists");
@@ -102,6 +107,10 @@ impl EnvProvider for TermuxEnv {
             }
 
             return Ok(shell.to_owned());
+        }
+
+        if !components.len() >= 1 || !matches!(components[0], Utf8Component::Normal(_)) {
+            bail!("Relative paths are not allowed. Only file names or absolute paths are allowed");
         }
 
         let shell_os_path = which(shell).context("Shell is not found in $PATH")?;

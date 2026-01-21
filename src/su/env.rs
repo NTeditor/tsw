@@ -98,7 +98,7 @@ impl EnvProvider for TermuxEnv {
             return Ok(shell.to_owned());
         }
 
-        if !components.len() >= 1 || !matches!(components[0], Utf8Component::Normal(_)) {
+        if components.len() > 1 || !matches!(components[0], Utf8Component::Normal(_)) {
             bail!("Relative paths are not allowed. Only file names or absolute paths are allowed");
         }
 

@@ -82,7 +82,7 @@ impl EnvProvider for TermuxEnv {
     fn get_shell_path(&self) -> Result<Utf8PathBuf> {
         let shell = self.shell.as_deref().unwrap_or(&self.config.shell);
         let components: Vec<_> = shell.components().collect();
-        if components.len() == 0 {
+        if components.is_empty() {
             bail!("The path cannot be empty. Specify a file name or absolute path");
         }
 

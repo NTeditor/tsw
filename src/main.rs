@@ -8,6 +8,7 @@ use config::Config;
 use std::process;
 use su::SuShell;
 use su::env::TermuxEnv;
+use tracing::{debug, info};
 use tracing_subscriber::fmt::time::ChronoUtc;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -34,16 +35,21 @@ struct Cli {
 }
 
 fn check_os() -> Result<()> {
-    tracing::info!("Checking target os..");
+    info!("Checking target os..");
     if !cfg!(target_os = "android") {
         bail!("This program for termux (android)");
     }
-    tracing::info!("Good, your system is android");
+    info!("Good, your system is android");
     Ok(())
 }
 
 fn init_logger() {
-    let env_filter = EnvFilter::from_default_env();
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        #[cfg(not(debug_assertions))]
+        return EnvFilter::new("error");
+        #[cfg(debug_assertions)]
+        return EnvFilter::new("debug");
+    });
     let timer = ChronoUtc::new("%H:%M:%S".to_string());
     let fmt_layer = fmt::layer()
         .with_writer(std::io::stdout)
@@ -60,9 +66,9 @@ fn init_logger() {
 fn main() -> Result<()> {
     init_logger();
     check_os()?;
-    tracing::info!("Parsing cli args");
+    info!("Parsing cli args");
     let cli = Cli::parse();
-    tracing::info!(cli = ?cli, "Success parsed cli args");
+    info!(cli = ?cli, "Success parsed cli args");
     let Cli {
         command,
         shell,
@@ -70,16 +76,16 @@ fn main() -> Result<()> {
         config: config_path,
     } = cli;
 
-    tracing::info!(config_path = config_path.as_str(), "Loading config");
+    info!(config_path = config_path.as_str(), "Loading config");
     let config: Config = confy::load_path(config_path)?;
 
-    tracing::info!("Creating env provider");
+    debug!("Creating env provider");
     let env = TermuxEnv::new(config, shell, mount_master);
 
-    tracing::info!("Creating su shell");
+    debug!("Creating su shell");
     let su_shell = SuShell::new(command, env);
 
-    tracing::info!("Running su shell");
+    info!("Running su shell");
     let exit_code = su_shell.run()?;
     if exit_code != 0 {
         process::exit(exit_code);

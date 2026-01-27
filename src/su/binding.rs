@@ -4,6 +4,32 @@ use std::{
     fmt::Debug,
     process::{Command, Stdio},
 };
+use tracing::{debug, info, warn};
+
+const MAGISK_PATTERN: &str = "magisksu";
+const DEFAULT_EXIT_CODE: i32 = 1;
+
+macro_rules! add_flag {
+    ($name:ident, $flag:expr) => {
+        fn $name(&mut self) -> &mut Self {
+            debug!(flag = $flag, "Add flag to command");
+            self.arg($flag);
+            self
+        }
+    };
+}
+
+macro_rules! add_value_flag {
+    ($name:ident, $flag:expr) => {
+        fn $name<S: Into<String>>(&mut self, value: S) -> &mut Self {
+            let value = value.into();
+            debug!(flag = $flag, value = value, "Add flag to command");
+            self.arg($flag);
+            self.arg(value);
+            self
+        }
+    };
+}
 
 pub struct SuCmdFactory;
 impl SuCmdFactory {
@@ -13,7 +39,7 @@ impl SuCmdFactory {
 }
 impl SuBindingFactory for SuCmdFactory {
     type Binding = SuCmd;
-    fn create<S: AsRef<str>>(&self, su_path: S) -> Self::Binding {
+    fn create<S: Into<String>>(&self, su_path: S) -> Self::Binding {
         SuCmd::new(su_path)
     }
 }
@@ -26,107 +52,84 @@ pub struct SuCmd {
 }
 
 impl SuCmd {
-    pub fn new<S: AsRef<str>>(su_path: S) -> Self {
-        let path = su_path.as_ref();
-        tracing::info!(su_path = path, "Creating SuCmd instance");
+    pub fn new<S: Into<String>>(su_path: S) -> Self {
+        let path = su_path.into();
         Self {
-            path: path.to_string(),
+            path,
             args: Vec::new(),
             envs: Vec::new(),
         }
     }
 
-    fn arg<S: AsRef<str>>(&mut self, arg: S) {
-        let arg = arg.as_ref();
-        self.args.push(arg.to_string());
+    fn arg<S: Into<String>>(&mut self, arg: S) {
+        let arg = arg.into();
+        self.args.push(arg);
+    }
+
+    fn setup_cmd(self, cmd: &mut Command) {
+        cmd.args(self.args);
+        cmd.env_clear();
+        cmd.envs(self.envs);
+        cmd.stdin(Stdio::inherit());
+        cmd.stdout(Stdio::inherit());
+        cmd.stderr(Stdio::inherit());
     }
 }
 
 impl SuBinding for SuCmd {
-    fn interactive(&mut self) -> &mut Self {
-        tracing::info!("Add -i flag to su command");
-        self.arg("-i");
-        self
-    }
-
-    fn mount_master(&mut self) -> &mut Self {
-        tracing::info!("Add --mount-master flag to su command");
-        self.arg("--mount-master");
-        self
-    }
-
-    fn shell<S: AsRef<str>>(&mut self, shell: S) -> &mut Self {
-        let shell = shell.as_ref();
-        tracing::info!(shell = shell, "Add --shell flag to su command");
-        self.arg("--shell");
-        self.arg(shell);
-        self
-    }
-
-    fn preserve_environment(&mut self) -> &mut Self {
-        tracing::info!("Add --preserve-environment flag to su command");
-        self.arg("--preserve-environment");
-        self
-    }
-
-    fn command<S: AsRef<str>>(&mut self, command: S) -> &mut Self {
-        let command = command.as_ref();
-        tracing::info!(command = command, "Add -c flag to su command");
-        self.arg("-c");
-        self.arg(command);
-        self
-    }
+    add_flag!(interactive, "-i");
+    add_flag!(mount_master, "--mount-master");
+    add_flag!(preserve_environment, "--preserve-environment");
+    add_value_flag!(shell, "--shell");
+    add_value_flag!(command, "-c");
 
     fn set_envs<I, K, V>(&mut self, vars: I) -> &mut Self
     where
         I: IntoIterator<Item = (K, V)>,
-        K: AsRef<str>,
-        V: AsRef<str>,
+        K: Into<String>,
+        V: Into<String>,
     {
-        tracing::info!("Cleaning env in su command");
+        info!("Cleaning environment variable to vector");
         self.envs.clear();
+        info!("Pushing environment variable to vector");
         for (k, v) in vars {
-            let k = k.as_ref();
-            let v = v.as_ref();
-            tracing::info!(key = k, value = v, "Setting env var in su command");
-            self.envs.push((k.to_string(), v.to_string()));
+            let k = k.into();
+            let v = v.into();
+            debug!(key = k, value = v, "Push environment variable to vector");
+            self.envs.push((k, v));
         }
         self
     }
 
+    #[tracing::instrument(skip(self))]
     fn spawn_and_wait(self) -> Result<i32> {
-        tracing::info!(
+        info!(
             su_path = ?self.path,
             args = ?self.args,
             envs = ?self.envs,
             "Running su command"
         );
         let mut cmd = Command::new(&self.path);
-        cmd.args(self.args);
-        cmd.stdin(Stdio::inherit());
-        cmd.stdout(Stdio::inherit());
-        cmd.stderr(Stdio::inherit());
-        cmd.envs(self.envs);
-        tracing::info!(
-            program = ?cmd.get_program(),
-            args = ?cmd.get_args(),
-            envs = ?cmd.get_envs(),
-            "Final command struct"
-        );
-        let child = cmd.spawn()?;
-        let output = child.wait_with_output()?;
-        match output.status.code() {
+        self.setup_cmd(&mut cmd);
+        info!("Spawning child su process");
+        let mut child = cmd.spawn()?;
+        info!("Waiting for child su process to complete");
+        let output = child.wait()?;
+        match output.code() {
             Some(0) => {
-                tracing::info!("The su process completed successfully");
+                info!("The su process completed successfully");
                 Ok(0)
             }
             Some(v) => {
-                tracing::warn!(code = v, "The su process exited with a non-zero code");
+                warn!(code = v, "The su process exited with a non-zero code");
                 Ok(v)
             }
             None => {
-                tracing::error!("Failed to get su exit code, using default -1");
-                Ok(-1)
+                warn!(
+                    default_exit_code = DEFAULT_EXIT_CODE,
+                    "Failed to get su exit code, using default exit code"
+                );
+                Ok(DEFAULT_EXIT_CODE)
             }
         }
     }
@@ -139,15 +142,90 @@ impl SuBinding for SuCmd {
             bail!("Failed execute su. Exit code is not null");
         }
 
-        const MAGISK_PATTERN: &str = "magisk";
-
         let output_str = String::from_utf8_lossy(&output.stdout).to_lowercase();
         if output_str.contains(MAGISK_PATTERN) {
-            tracing::info!("Found magisk pattern in stdout");
+            info!("Found magisk pattern in stdout");
             Ok(true)
         } else {
-            tracing::info!("Magisk pattern is not found in stdout");
+            info!("Magisk pattern is not found in stdout");
             Ok(false)
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn interactive_flag() {
+        const EXPECTED: &[&str] = &["-i"];
+        let mut binding = SuCmd::new("/system/bin/su");
+        binding.interactive();
+        assert_eq!(binding.args.as_slice(), EXPECTED);
+    }
+
+    #[test]
+    fn shell_flag() {
+        const EXPECTED: &[&str] = &["--shell", "/system/bin/sh"];
+        let mut binding = SuCmd::new("/system/bin/su");
+        binding.shell("/system/bin/sh");
+        assert_eq!(binding.args.as_slice(), EXPECTED);
+    }
+
+    #[test]
+    fn multiple_flags() {
+        const EXPECTED: &[&str] = &[
+            "-i",
+            "--mount-master",
+            "--preserve-environment",
+            "--shell",
+            "/system/bin/sh",
+        ];
+        let mut binding = SuCmd::new("/system/bin/su");
+        binding.interactive();
+        binding.mount_master();
+        binding.preserve_environment();
+        binding.shell("/system/bin/sh");
+        assert_eq!(binding.args.as_slice(), EXPECTED);
+    }
+
+    #[test]
+    fn envs() {
+        const EXPECTED: &[(&str, &str)] = &[("PATH", "/system/bin")];
+        let mut binding = SuCmd::new("/system/bin/su");
+        binding.set_envs(EXPECTED.iter().copied());
+        let result: Vec<(&str, &str)> = binding
+            .envs
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
+        assert_eq!(result, EXPECTED);
+    }
+
+    #[test]
+    fn setup_cmd() {
+        const EXPECTED_ENVS: &[(&str, &str)] = &[("PATH", "/system/bin"), ("HOME", "/root")];
+        const EXPECTED_ARGS: &[&str] = &["-i", "--mount-master", "-c", "ls"];
+        let mut cmd = Command::new("/system/bin/su");
+        let mut binding = SuCmd::new("/system/bin/su");
+        binding.interactive().mount_master().command("ls");
+        binding.set_envs(EXPECTED_ENVS.iter().copied());
+        binding.setup_cmd(&mut cmd);
+
+        let result_args: Vec<&str> = cmd.get_args().map(|s| s.to_str().unwrap()).collect();
+        assert_eq!(result_args, EXPECTED_ARGS);
+
+        let result_envs: HashSet<(&str, &str)> = cmd
+            .get_envs()
+            .map(|(k, v)| {
+                let k = k.to_str().unwrap();
+                let v = v.unwrap().to_str().unwrap();
+                (k, v)
+            })
+            .collect();
+        let expected_envs: HashSet<(&str, &str)> = EXPECTED_ENVS.iter().copied().collect();
+        assert_eq!(result_envs, expected_envs);
     }
 }

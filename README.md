@@ -1,3 +1,9 @@
+tsw is now hosted on [codeberg.org](https://codeberg.org/NTeditor/tsw/).
+
+<a href="https://codeberg.org/NTeditor/tsw/">
+    <img alt="Get it on Codeberg" src="https://get-it-on.codeberg.org/get-it-on-blue-on-white.png" height="60">
+</a>
+
 # Termux SU Wrapper
 
 [![License: GPL-3.0-only](https://img.shields.io/badge/License-GPL--3.0--only-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)  
